@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: bni-ask-editor
+    runtime: python
+    plan: starter            # persistent disks need a paid plan
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn -w 2 --threads 4 -b 0.0.0.0:$PORT --timeout 120 app:app
+    envVars:
+      - key: BNI_DATA_DIR
+        value: /var/data
+      - key: BNI_ADMIN_KEY
+        sync: false          # you enter this in the dashboard
+      - key: BNI_VIEWER_KEY
+        sync: false
+      - key: PYTHON_VERSION
+        value: 3.12.4
+    disk:
+      name: bni-data
+      mountPath: /var/data
+      sizeGB: 2

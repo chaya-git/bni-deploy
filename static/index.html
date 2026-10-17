@@ -1,0 +1,592 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>Specific Ask Editor · BNI Jetkings</title>
+<style>
+  :root {
+    --red: #CF2030; --red-dark: #A91826; --ink: #1c1f2a; --muted: #5d6475; --line: #dfe2ea;
+    --bg: #f4f5f9; --card: #ffffff; --lav: #CDD3EA; --ok: #1f7a4d; --warn: #b26a00; --err: #b3261e;
+    --radius: 10px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body { font: 15px/1.45 -apple-system, "Segoe UI", Roboto, Arial, sans-serif; color: var(--ink); background: var(--bg); }
+  button { font: inherit; cursor: pointer; }
+  .topbar { display: flex; align-items: center; gap: 14px; padding: 10px 20px; background: #fff; border-bottom: 3px solid var(--red); position: sticky; top: 0; z-index: 5; flex-wrap: wrap; }
+  .brand { font-weight: 800; letter-spacing: .02em; color: var(--red); font-size: 20px; }
+  .brand small { display: block; font-weight: 600; font-size: 11px; color: var(--muted); letter-spacing: .12em; margin-top: -2px; }
+  .topbar h1 { font-size: 16px; margin: 0; font-weight: 600; flex: 1; min-width: 160px; }
+  .actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .btn { border: 1px solid var(--line); background: #fff; border-radius: 8px; padding: 8px 14px; font-weight: 600; color: var(--ink); }
+  .btn:hover { border-color: #b9bfce; background: #fafbfd; }
+  .btn.primary { background: var(--red); border-color: var(--red); color: #fff; }
+  .btn.primary:hover { background: var(--red-dark); }
+  .btn:disabled { opacity: .55; cursor: not-allowed; }
+  .btn.small { padding: 5px 10px; font-size: 13px; }
+  .chk { font-size: 13px; color: var(--muted); display: flex; align-items: center; gap: 6px; }
+
+  .layout { display: grid; grid-template-columns: 300px 1fr; gap: 18px; padding: 18px 20px 40px; max-width: 1700px; margin: 0 auto; }
+  .layout.solo { grid-template-columns: 1fr; max-width: 1400px; }
+  .side { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); display: flex; flex-direction: column; height: calc(100vh - 110px); position: sticky; top: 84px; overflow: hidden; }
+  .side .search { padding: 12px; border-bottom: 1px solid var(--line); }
+  .search input { width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; font: inherit; }
+  .search input:focus, textarea:focus, .hdr-in:focus { outline: 2px solid #f0a2aa; border-color: var(--red); }
+  .filters { display: flex; gap: 6px; margin-top: 10px; }
+  .chip { border: 1px solid var(--line); background: #fff; border-radius: 999px; padding: 3px 11px; font-size: 12px; color: var(--muted); }
+  .chip[aria-pressed="true"] { background: var(--red); color: #fff; border-color: var(--red); }
+  .count { font-size: 12px; color: var(--muted); padding: 8px 14px 4px; }
+  .list { overflow: auto; flex: 1; padding: 0 6px 10px; }
+  .item { display: flex; gap: 10px; align-items: center; width: 100%; text-align: left; border: 0; background: transparent; padding: 9px 10px; border-radius: 8px; }
+  .item:hover { background: #f3f4f8; }
+  .item[aria-current="true"] { background: #fdecee; box-shadow: inset 3px 0 0 var(--red); }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: #c9cdd8; flex: none; }
+  .dot.on { background: var(--ok); }
+  .item .nm { font-weight: 600; font-size: 14px; line-height: 1.2; }
+  .item .ct { font-size: 12px; color: var(--muted); }
+  .item .sl { margin-left: auto; font-size: 12px; color: var(--muted); flex: none; }
+
+  .main { display: grid; gap: 18px; align-content: start; min-width: 0; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); }
+  .pres-head { padding: 16px 20px; display: flex; gap: 14px; align-items: baseline; flex-wrap: wrap; }
+  .pres-head h2 { margin: 0; font-size: 22px; }
+  .pres-head .sub { color: var(--muted); }
+  .pill { font-size: 12px; font-weight: 700; border-radius: 999px; padding: 3px 10px; background: #eef0f6; color: var(--muted); }
+  .content { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(340px, 1fr); gap: 18px; align-items: start; }
+  .preview { padding: 12px; position: relative; }
+  .preview img { width: 100%; height: auto; display: block; border-radius: 6px; border: 1px solid var(--line); background: #fff; aspect-ratio: 16/9; }
+  .preview .cap { font-size: 12px; color: var(--muted); margin: 8px 2px 0; }
+  .loading { position: absolute; inset: 12px; display: none; align-items: center; justify-content: center; background: rgba(255,255,255,.55); border-radius: 6px; font-weight: 600; color: var(--muted); }
+  .loading.on { display: flex; }
+
+  .editor { padding: 18px 18px 16px; }
+  .askq { margin: 0 0 14px; padding: 0; border: 0; }
+  .askq legend { font-weight: 700; font-size: 15px; padding: 0; margin-bottom: 8px; }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+  .seg label { cursor: pointer; }
+  .seg input { position: absolute; opacity: 0; pointer-events: none; }
+  .seg span { display: block; padding: 8px 26px; font-weight: 700; background: #fff; color: var(--muted); }
+  .seg label + label span { border-left: 1px solid var(--line); }
+  .seg input:checked + span { background: var(--red); color: #fff; }
+  .seg input:focus-visible + span { outline: 2px solid #f0a2aa; outline-offset: -2px; }
+  .noask { margin: 12px 0 0; font-size: 13px; color: var(--muted); }
+  .previews { display: grid; gap: 18px; min-width: 0; }
+  .mediaq { margin: 14px 0 0; padding: 14px 0 0; border: 0; border-top: 1px solid var(--line); }
+  .mediaq legend { float: left; width: 100%; font-weight: 700; font-size: 15px; padding: 0; margin-bottom: 8px; }
+  .mediaq .seg { clear: both; }
+  .mslide { padding: 12px; }
+  .mslide .tag { font-size: 12px; font-weight: 700; letter-spacing: .08em; color: var(--muted); margin: 0 2px 8px; }
+  .mcanvas { position: relative; aspect-ratio: 16/9; background: #fff; border: 1px solid var(--line); border-radius: 6px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+  .mcanvas img, .mcanvas video { max-width: 100%; max-height: 100%; display: block; }
+  .mcanvas.drag { outline: 3px dashed var(--red); outline-offset: -8px; background: #fdecee; }
+  .drop { text-align: center; color: var(--muted); padding: 20px; }
+  .drop b { display: block; color: var(--ink); font-size: 16px; margin-bottom: 4px; }
+  .vlink { text-align: center; padding: 20px; }
+  .vlink a { color: var(--red); font-weight: 700; word-break: break-all; }
+  .mtools { display: flex; gap: 10px; align-items: center; margin-top: 10px; flex-wrap: wrap; }
+  .mtools input[type=url] { flex: 1; min-width: 200px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; font: inherit; }
+  .mstatus { font-size: 13px; font-weight: 600; color: var(--muted); }
+  .mstatus.err { color: var(--err); } .mstatus.ok { color: var(--ok); }
+  .editor h3 { margin: 0 0 2px; font-size: 14px; letter-spacing: .14em; color: #fff; background: var(--red); padding: 9px 12px; text-align: center; border-radius: 6px 6px 0 0; }
+  .grid { border: 1px solid #1e1e1e; border-top: 0; border-radius: 0 0 6px 6px; overflow: hidden; }
+  .hdr-row, .row { display: grid; grid-template-columns: 38fr 62fr 34px; }
+  .hdr-row { background: #B4BDE0; }
+  .hdr-in { width: 100%; border: 0; background: transparent; font: inherit; font-weight: 700; padding: 8px 10px; }
+  .row { background: var(--lav); border-top: 1px solid #1e1e1e; }
+  .row textarea { width: 100%; resize: vertical; min-height: 64px; border: 0; background: transparent; font: inherit; padding: 8px 10px; border-right: 1px solid #1e1e1e; }
+  .row textarea:last-of-type { border-right: 0; }
+  .rm { border: 0; background: transparent; color: var(--muted); font-size: 18px; border-left: 1px solid #1e1e1e; }
+  .rm:hover { color: var(--err); background: #ffffff55; }
+  .tools { display: flex; align-items: center; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
+  .meter { margin-top: 12px; font-size: 13px; padding: 8px 10px; border-radius: 8px; background: #eef7f1; color: var(--ok); }
+  .meter.bad { background: #fdecea; color: var(--err); }
+  .meter.warn { background: #fff4e0; color: var(--warn); }
+  .savebar { display: flex; align-items: center; gap: 12px; margin-top: 14px; flex-wrap: wrap; }
+  .status { font-size: 13px; font-weight: 600; color: var(--muted); }
+  .status.ok { color: var(--ok); } .status.dirty { color: var(--warn); } .status.err { color: var(--err); }
+  .hint { font-size: 12px; color: var(--muted); margin-top: 10px; }
+  .banner { margin: 0; padding: 12px 16px; border-radius: 8px; background: #fdecea; color: var(--err); display: none; }
+  .banner.on { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .empty { padding: 60px 20px; text-align: center; color: var(--muted); }
+
+  .login { max-width: 420px; margin: 12vh auto; padding: 28px; }
+  .login h2 { margin-top: 0; }
+  .login input { width: 100%; padding: 11px 12px; border: 1px solid var(--line); border-radius: 8px; font: inherit; margin: 10px 0 14px; }
+  .login .err { color: var(--err); min-height: 1.3em; font-size: 14px; }
+  .badge-view { font-size: 12px; font-weight: 700; border-radius: 999px; padding: 3px 10px; background: #e8eefc; color: #2b4a9b; }
+  .viewonly .tools, .viewonly #btnSave, .viewonly .hint, .viewonly .mtools, .viewonly #btnCopy,
+  .viewonly .rm, .viewonly .meter, .viewonly .mslide .cap, .viewonly #status { display: none !important; }
+  .viewonly .seg { pointer-events: none; }
+  .viewonly .seg input:not(:checked) + span { opacity: .55; }
+  .viewonly textarea, .viewonly .hdr-in { cursor: default; resize: none; }
+  .roles { max-width: 720px; margin: 10vh auto; padding: 0 16px; text-align: center; }
+  .roles .brand { font-size: 28px; }
+  .roles h2 { font-size: 24px; margin: 18px 0 6px; }
+  .roles p.sub { color: var(--muted); margin: 0 0 26px; }
+  .rolegrid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .rolecard { text-align: left; padding: 24px; border: 2px solid var(--line); border-radius: 14px; background: #fff; color: var(--ink); }
+  .rolecard:hover, .rolecard:focus-visible { border-color: var(--red); box-shadow: 0 6px 20px rgba(207,32,48,.12); outline: none; }
+  .rolecard b { display: block; font-size: 19px; margin-bottom: 6px; }
+  .rolecard span { color: var(--muted); font-size: 14px; }
+  .backlink { background: none; border: 0; color: var(--muted); padding: 0; margin-top: 12px; text-decoration: underline; font-size: 13px; }
+  @media (max-width: 600px) { .rolegrid { grid-template-columns: 1fr; } }
+  [hidden] { display: none !important; }
+
+  @media (max-width: 1100px) { .content { grid-template-columns: 1fr; } }
+  @media (max-width: 860px) {
+    .layout { grid-template-columns: 1fr; padding: 12px; }
+    .side { position: static; height: 320px; }
+    .topbar { padding: 10px 12px; }
+  }
+</style>
+</head>
+<body>
+
+<div id="roleView" hidden>
+  <div class="roles">
+    <div class="brand">BNI <small>JETKINGS</small></div>
+    <h2>Who are you?</h2>
+    <p class="sub">Choose one to continue.</p>
+    <div class="rolegrid">
+      <button class="rolecard" id="rolePresenter" type="button"><b>I'm a presenter</b><span>Sign in to add or edit your Specific Ask and any image or video.</span></button>
+      <button class="rolecard" id="roleViewer" type="button"><b>I'm a viewer</b><span>Open the updated deck right away. View only, nothing to sign in to.</span></button>
+    </div>
+  </div>
+</div>
+
+<div id="loginView" hidden>
+  <div class="card login">
+    <div class="brand">BNI <small>JETKINGS</small></div>
+    <h2>Presenter sign-in</h2>
+    <p style="color:var(--muted);margin:0">Enter your <b>admin key</b> to open the editor. (A <b>viewer key</b> opens the read-only dashboard.) Presenters with a personal link can just open it.</p>
+    <form id="loginForm">
+      <input id="keyInput" type="password" autocomplete="current-password" placeholder="Admin or viewer key" aria-label="Access key" required>
+      <button class="btn primary" type="submit" style="width:100%">Sign in</button>
+      <div class="err" id="loginErr" role="alert"></div>
+    </form>
+    <button class="backlink" id="btnBackRole" type="button">← Back</button>
+  </div>
+</div>
+
+<div id="appView" hidden>
+  <header class="topbar">
+    <div class="brand">BNI <small>JETKINGS</small></div>
+    <h1 id="title">Specific Ask editor</h1>
+    <div class="actions" id="adminActions" hidden>
+      <label class="chk"><input type="checkbox" id="inclEmpty"> include empty tables</label>
+      <button class="btn" id="btnLinks" type="button">Presenter links (CSV)</button>
+      <button class="btn primary" id="btnDeck" type="button">Download updated deck (PDF)</button>
+      <button class="btn small" id="btnSignOut" type="button">Sign out</button>
+    </div>
+  </header>
+
+  <div class="layout" id="layout">
+    <aside class="side" id="side">
+      <div class="search">
+        <input id="q" type="search" placeholder="Search presenter, category or slide no." aria-label="Search presenters" autocomplete="off">
+        <div class="filters" role="group" aria-label="Filter">
+          <button class="chip" data-f="all" aria-pressed="true" type="button">All</button>
+          <button class="chip" data-f="saved" aria-pressed="false" type="button">Filled</button>
+          <button class="chip" data-f="empty" aria-pressed="false" type="button">Not yet</button>
+        </div>
+      </div>
+      <div class="count" id="count"></div>
+      <div class="list" id="list"></div>
+    </aside>
+
+    <main class="main">
+      <p class="banner" id="banner" role="alert"><span id="bannerText"></span> <button class="btn small" id="btnReload" type="button">Reload latest</button></p>
+      <div class="card empty" id="emptyState">Choose a presenter from the list to edit their slide.</div>
+
+      <section id="editorView" class="main" hidden>
+        <div class="card pres-head">
+          <h2 id="pName"></h2>
+          <span class="sub" id="pSub"></span>
+          <span class="pill" id="pSlide"></span>
+        </div>
+        <div class="content">
+          <div class="previews">
+          <div class="card preview">
+            <img id="slideImg" alt="Slide preview with the Specific Ask table">
+            <div class="loading" id="loading">Updating preview…</div>
+            <div class="cap" id="cap">Live preview of the real slide. The table is drawn into the empty space; nothing else on the slide changes.</div>
+          </div>
+          <div class="card mslide" id="mediaCard" hidden>
+            <div class="tag">NEW SLIDE · RIGHT AFTER THIS ONE</div>
+            <div class="mcanvas" id="mCanvas"></div>
+            <div class="mtools">
+              <input type="file" id="mFile" accept="image/*,video/mp4,video/webm,video/quicktime,.mp4,.webm,.mov,.m4v" hidden>
+              <button class="btn small" id="mChoose" type="button">Choose image or video</button>
+              <button class="btn small" id="mRemove" type="button" hidden>Remove</button>
+              <span class="mstatus" id="mStatus" role="status" aria-live="polite"></span>
+            </div>
+            <div class="mtools">
+              <input type="url" id="mLink" placeholder="…or paste a video link (YouTube, Drive, etc.)" aria-label="Video link" maxlength="500">
+              <button class="btn small" id="mLinkSave" type="button">Use link</button>
+            </div>
+            <div class="cap">Images are placed on the slide. Videos can't play inside a PDF, so the slide shows a "Click to play" card that opens the video.</div>
+          </div>
+          </div>
+          <div class="card editor">
+            <fieldset class="askq">
+              <legend>Do you have a specific ask?</legend>
+              <div class="seg" role="radiogroup">
+                <label><input type="radio" name="hasAsk" id="askYes" value="yes"><span>Yes</span></label>
+                <label><input type="radio" name="hasAsk" id="askNo" value="no"><span>No</span></label>
+              </div>
+              <p class="noask" id="noAskNote">No table will be added to this slide.</p>
+            </fieldset>
+            <div id="askBody" hidden>
+            <h3>SPECIFIC ASK</h3>
+            <div class="grid" id="grid">
+              <div class="hdr-row">
+                <input class="hdr-in" id="h1" maxlength="40" aria-label="Left column heading">
+                <input class="hdr-in" id="h2" maxlength="40" aria-label="Right column heading" style="border-left:1px solid #1e1e1e">
+                <span></span>
+              </div>
+              <div id="rows"></div>
+            </div>
+            <div class="tools">
+              <button class="btn small" id="btnAdd" type="button">+ Add row</button>
+              <span class="hint" id="rowHint"></span>
+            </div>
+            <div class="meter" id="meter" role="status" aria-live="polite"></div>
+            </div>
+            <div class="savebar">
+              <button class="btn primary" id="btnSave" type="button">Save changes</button>
+              <button class="btn" id="btnSlidePdf" type="button">Download this slide (PDF)</button>
+              <button class="btn small" id="btnCopy" type="button" hidden>Copy presenter link</button>
+              <span class="status" id="status" role="status" aria-live="polite"></span>
+            </div>
+            <div class="hint">Tip: Ctrl/⌘ + S saves. Choose "No" and the slide is left exactly as it is, with no table. Text shrinks automatically to fit the slide; if it can't, Save is blocked rather than cutting your words.</div>
+            <fieldset class="askq mediaq">
+              <legend>Do you want to add an image or video?</legend>
+              <div class="seg" role="radiogroup">
+                <label><input type="radio" name="hasMedia" id="mediaYes" value="yes"><span>Yes</span></label>
+                <label><input type="radio" name="hasMedia" id="mediaNo" value="no"><span>No</span></label>
+              </div>
+              <p class="noask" id="noMediaNote">No extra slide will be added.</p>
+            </fieldset>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+</div>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const tokenMatch = location.pathname.match(/^\/p\/([^/]+)/);
+  const TOKEN = tokenMatch ? decodeURIComponent(tokenMatch[1]) : null;
+  let ADMIN_KEY = null, KEY_KIND = 'admin', READONLY = false;
+  try { ADMIN_KEY = sessionStorage.getItem('bni_admin_key'); KEY_KIND = sessionStorage.getItem('bni_key_kind') || 'admin'; } catch (e) {}
+
+  let presenters = [], filter = 'all', current = null, limits = { rows: 8, cell: 600, header: 40 };
+  let state = null;         // {page, version, enabled, headers, rows}
+  let dirty = false, saving = false, previewTimer = null, previewSeq = 0, lastFit = null;
+
+  const authHeaders = () => TOKEN ? { 'X-Token': TOKEN } : (KEY_KIND === 'viewer' ? { 'X-Viewer-Key': ADMIN_KEY || '' } : { 'X-Admin-Key': ADMIN_KEY || '' });
+  async function api(path, opts = {}) {
+    const res = await fetch(path, { ...opts, headers: { ...(opts.body ? { 'Content-Type': 'application/json' } : {}), ...authHeaders(), ...(opts.headers || {}) } });
+    return res;
+  }
+  async function download(path, fallbackName) {
+    const res = await api(path);
+    if (!res.ok) { setStatus('Download failed', 'err'); return; }
+    const blob = await res.blob();
+    const cd = res.headers.get('Content-Disposition') || '';
+    const m = cd.match(/filename="([^"]+)"/);
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = m ? m[1] : fallbackName;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  }
+
+  // ---------------------------------------------------------------- startup
+  async function start() {
+    const res = await api('/api/session');
+    if (!res.ok) {
+      if (TOKEN) { document.body.innerHTML = '<div class="card login"><h2>Link not valid</h2><p>This personal link is not recognised. Please ask your chapter admin for your link.</p></div>'; return; }
+      $('roleView').hidden = false; $('loginView').hidden = true; $('appView').hidden = true; return;
+    }
+    const s = await res.json();
+    $('roleView').hidden = true; $('loginView').hidden = true; $('appView').hidden = false;
+    if (s.role === 'admin') {
+      $('adminActions').hidden = false; $('btnCopy').hidden = false;
+      $('title').textContent = 'Specific Ask editor · Admin';
+      await loadList();
+    } else if (s.role === 'viewer') {
+      READONLY = true; document.body.classList.add('viewonly');
+      $('adminActions').hidden = false; $('btnLinks').hidden = true; $('inclEmpty').closest('label').hidden = true;
+      $('title').textContent = 'Specific Ask · View only';
+      const b = document.createElement('span'); b.className = 'badge-view'; b.textContent = 'View only'; $('title').after(b);
+      ['h1', 'h2'].forEach(id => { $(id).readOnly = true; });
+      ['askYes', 'askNo', 'mediaYes', 'mediaNo'].forEach(id => { $(id).disabled = true; });
+      await loadList();
+    } else {
+      $('layout').classList.add('solo'); $('side').hidden = true; $('emptyState').hidden = true;
+      $('title').textContent = 'Your Specific Ask';
+      await openPresenter(s.presenter.page, true);
+    }
+  }
+
+  $('rolePresenter').addEventListener('click', () => { $('roleView').hidden = true; $('loginView').hidden = false; $('keyInput').focus(); });
+  $('roleViewer').addEventListener('click', () => { location.href = '/view'; });
+  $('btnBackRole').addEventListener('click', () => { $('loginView').hidden = true; $('roleView').hidden = false; $('loginErr').textContent = ''; });
+
+  $('loginForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    ADMIN_KEY = $('keyInput').value.trim();
+    let res = null;
+    for (const kind of ['admin', 'viewer']) {   // the server decides which kind of key it is
+      KEY_KIND = kind; res = await api('/api/session'); if (res.ok) break;
+    }
+    if (res.ok) { try { sessionStorage.setItem('bni_admin_key', ADMIN_KEY); sessionStorage.setItem('bni_key_kind', KEY_KIND); } catch (e2) {} $('loginErr').textContent = ''; start(); }
+    else { $('loginErr').textContent = 'That key is not correct.'; }
+  });
+  $('btnSignOut').addEventListener('click', () => { try { sessionStorage.removeItem('bni_admin_key'); sessionStorage.removeItem('bni_key_kind'); } catch (e) {} location.reload(); });
+
+  // --------------------------------------------------------------- list/search
+  async function loadList() {
+    const res = await api('/api/presenters');
+    if (!res.ok) return;
+    presenters = await res.json();
+    renderList();
+  }
+  function renderList() {
+    const q = $('q').value.trim().toLowerCase();
+    const items = presenters.filter(p => {
+      if (filter === 'saved' && !p.saved) return false;
+      if (filter === 'empty' && p.saved) return false;
+      if (!q) return true;
+      return (p.name + ' ' + p.category + ' ' + p.company + ' ' + p.page).toLowerCase().includes(q);
+    });
+    const done = presenters.filter(p => p.saved).length;
+    $('count').textContent = `${items.length} shown · ${done} of ${presenters.length} filled in`;
+    const list = $('list'); list.textContent = '';
+    items.forEach(p => {
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'item';
+      if (current === p.page) b.setAttribute('aria-current', 'true');
+      const dot = document.createElement('span'); dot.className = 'dot' + (p.saved ? ' on' : ''); dot.title = p.saved ? 'Specific Ask saved' : 'Nothing saved yet';
+      const box = document.createElement('span');
+      const nm = document.createElement('div'); nm.className = 'nm'; nm.textContent = p.name;
+      const ct = document.createElement('div'); ct.className = 'ct'; ct.textContent = p.category || p.company || '';
+      box.append(nm, ct);
+      const sl = document.createElement('span'); sl.className = 'sl'; sl.textContent = 'Slide ' + p.page;
+      b.append(dot, box, sl);
+      b.addEventListener('click', () => openPresenter(p.page));
+      list.appendChild(b);
+    });
+    if (!items.length) { const d = document.createElement('div'); d.className = 'empty'; d.textContent = 'No presenters match.'; d.style.padding = '30px 10px'; list.appendChild(d); }
+  }
+  $('q').addEventListener('input', renderList);
+  document.querySelectorAll('.chip').forEach(c => c.addEventListener('click', () => {
+    filter = c.dataset.f;
+    document.querySelectorAll('.chip').forEach(x => x.setAttribute('aria-pressed', String(x === c)));
+    renderList();
+  }));
+
+  // ------------------------------------------------------------------ editor
+  async function openPresenter(page, force) {
+    if (!force && dirty && !confirm('You have unsaved changes on this slide. Leave without saving?')) return;
+    const res = await api('/api/presenter/' + page);
+    if (!res.ok) { setStatus('Could not open this slide', 'err'); return; }
+    const d = await res.json();
+    current = page; limits = d.limits;
+    state = { page, version: d.version, enabled: !!d.enabled, headers: d.headers.slice(), rows: d.rows.map(r => r.slice()), name: d.name };
+    $('emptyState').hidden = true; $('editorView').hidden = false; $('banner').classList.remove('on');
+    $('pName').textContent = d.name;
+    $('pSub').textContent = [d.category, d.company].filter(Boolean).join(' · ');
+    $('pSlide').textContent = 'Slide ' + d.page;
+    $('h1').value = state.headers[0]; $('h2').value = state.headers[1];
+    if (!state.rows.length) state.rows.push(['', '']);
+    renderRows(); applyEnabled(); setDirty(false);
+    setStatus(d.updated_at ? 'Saved ' + fmtTime(d.updated_at) : 'Nothing saved yet', d.updated_at ? 'ok' : '');
+    if (!TOKEN) renderList();
+    refreshPreview(0); loadMedia(page);
+  }
+
+  function renderRows() {
+    const host = $('rows'); host.textContent = '';
+    state.rows.forEach((r, i) => {
+      const row = document.createElement('div'); row.className = 'row';
+      [0, 1].forEach(c => {
+        const ta = document.createElement('textarea');
+        ta.value = r[c]; ta.maxLength = limits.cell; ta.rows = 2; ta.readOnly = READONLY;
+        ta.setAttribute('aria-label', `Row ${i + 1}, ${c ? 'right' : 'left'} column`);
+        ta.placeholder = i === 0 ? (c ? 'e.g. why / how others can help' : 'e.g. who or what you are looking for') : '';
+        ta.addEventListener('input', () => { state.rows[i][c] = ta.value; changed(); });
+        row.appendChild(ta);
+      });
+      const rm = document.createElement('button'); rm.type = 'button'; rm.className = 'rm'; rm.textContent = '×'; rm.title = 'Remove row'; rm.setAttribute('aria-label', 'Remove row ' + (i + 1));
+      rm.addEventListener('click', () => { state.rows.splice(i, 1); if (!state.rows.length) state.rows.push(['', '']); renderRows(); changed(); });
+      row.appendChild(rm);
+      host.appendChild(row);
+    });
+    $('btnAdd').disabled = state.rows.length >= limits.rows;
+    $('rowHint').textContent = `${state.rows.length} of ${limits.rows} rows`;
+  }
+  $('btnAdd').addEventListener('click', () => {
+    if (state.rows.length >= limits.rows) return;
+    state.rows.push(['', '']); renderRows(); changed();
+    const t = $('rows').querySelectorAll('textarea'); t[t.length - 2].focus();
+  });
+  ['h1', 'h2'].forEach((id, i) => $(id).addEventListener('input', () => { state.headers[i] = $(id).value; changed(); }));
+
+  function applyEnabled() {
+    $('askYes').checked = state.enabled; $('askNo').checked = !state.enabled;
+    $('askBody').hidden = !state.enabled; $('noAskNote').hidden = state.enabled;
+    $('cap').textContent = state.enabled
+      ? 'Live preview of the real slide. The table is drawn into the empty space; nothing else on the slide changes.'
+      : 'This is the slide as it is. No Specific Ask table is added.';
+  }
+  [$('askYes'), $('askNo')].forEach(el => el.addEventListener('change', () => {
+    state.enabled = $('askYes').checked;
+    if (state.enabled && !state.rows.length) state.rows.push(['', '']);
+    renderRows(); applyEnabled(); changed();
+    if (state.enabled) { const t = $('rows').querySelector('textarea'); if (t) t.focus(); }
+  }));
+
+  function changed() { setDirty(true); refreshPreview(650); }
+  function setDirty(v) { dirty = v; if (v) setStatus('Unsaved changes', 'dirty'); }
+  function setStatus(t, cls) { const s = $('status'); s.textContent = t; s.className = 'status' + (cls ? ' ' + cls : ''); }
+  function fmtTime(iso) { try { return new Date(iso).toLocaleString([], { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }); } catch (e) { return iso; } }
+  const payload = () => ({ enabled: state.enabled, headers: state.headers, rows: state.rows, version: state.version });
+
+  function refreshPreview(delay) {
+    clearTimeout(previewTimer);
+    previewTimer = setTimeout(async () => {
+      const seq = ++previewSeq; $('loading').classList.add('on');
+      try {
+        const res = await api('/api/preview/' + state.page, { method: 'POST', body: JSON.stringify(payload()) });
+        if (seq !== previewSeq) return;
+        const d = await res.json().catch(() => ({ message: 'Server error (' + res.status + ')' }));
+        if (res.ok) { $('slideImg').src = d.image; lastFit = d; showMeter(d); }
+        else { lastFit = null; showMeter({ error: d.message }); }
+      } catch (e) { showMeter({ error: 'Preview unavailable — check your connection.' }); }
+      finally { if (seq === previewSeq) $('loading').classList.remove('on'); }
+    }, delay);
+  }
+  function showMeter(d) {
+    const m = $('meter'); m.className = 'meter';
+    if (!state.enabled) { m.textContent = ''; $('btnSave').disabled = false; return; }
+    if (d.error) { m.classList.add('bad'); m.textContent = d.error; $('btnSave').disabled = true; return; }
+    $('btnSave').disabled = !d.fits;
+    if (!d.fits) {
+      m.classList.add('bad');
+      m.textContent = `Too long for the space on this slide — please shorten by about ${Math.ceil(d.overflow_pt / 20)} line(s).`;
+    } else if (d.font < 14) {
+      m.classList.add('warn');
+      m.textContent = `Fits, but the text has been reduced to ${d.font}pt so it stays on the slide. Shorter text will read better from the back of the room.`;
+    } else {
+      m.textContent = `Fits on the slide (text size ${d.font}pt).`;
+    }
+  }
+
+  async function save() {
+    if (READONLY || saving || !state) return;
+    saving = true; $('btnSave').disabled = true; setStatus('Saving…', '');
+    try {
+      const res = await api('/api/presenter/' + state.page, { method: 'PUT', body: JSON.stringify(payload()) });
+      const d = await res.json();
+      if (res.ok) {
+        state.version = d.version; state.enabled = d.enabled; state.headers = d.headers.slice();
+        state.rows = d.rows.length ? d.rows.map(r => r.slice()) : [['', '']];
+        $('h1').value = state.headers[0]; $('h2').value = state.headers[1];
+        renderRows(); applyEnabled(); dirty = false; setStatus('All changes saved · ' + fmtTime(d.updated_at), 'ok');
+        const p = presenters.find(x => x.page === state.page); if (p) { p.saved = d.enabled && d.rows.length > 0; p.updated_at = d.updated_at; renderList(); }
+      } else if (res.status === 409) {
+        $('bannerText').textContent = d.message; $('banner').classList.add('on'); setStatus('Not saved — newer version exists', 'err');
+      } else { setStatus(d.message || 'Could not save', 'err'); }
+    } catch (e) { setStatus('Could not save — check your connection and try again', 'err'); }
+    finally { saving = false; if (!state.enabled) $('btnSave').disabled = false; else if (lastFit) $('btnSave').disabled = !lastFit.fits; }
+  }
+  $('btnSave').addEventListener('click', save);
+  $('btnReload').addEventListener('click', () => openPresenter(state.page, true));
+  document.addEventListener('keydown', (e) => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); if (!READONLY && state && !$('btnSave').disabled) save(); } });
+  window.addEventListener('beforeunload', (e) => { if (dirty) { e.preventDefault(); e.returnValue = ''; } });
+
+  $('btnSlidePdf').addEventListener('click', async () => {
+    if (dirty && !confirm('Your unsaved changes will not be in the PDF. Download the last saved version?')) return;
+    download('/api/export/slide/' + state.page + '.pdf', 'slide.pdf');
+  });
+  $('btnDeck').addEventListener('click', () => {
+    $('btnDeck').disabled = true; $('btnDeck').textContent = 'Preparing…';
+    download('/api/export/deck.pdf' + ($('inclEmpty').checked ? '?include_empty=1' : ''), 'BNI-Jetkings-OCT-updated.pdf')
+      .finally(() => { $('btnDeck').disabled = false; $('btnDeck').textContent = 'Download updated deck (PDF)'; });
+  });
+  $('btnLinks').addEventListener('click', () => download('/api/links.csv', 'presenter-links.csv'));
+  $('btnCopy').addEventListener('click', async () => {
+    const res = await api('/api/link/' + state.page); if (!res.ok) return;
+    const { link } = await res.json();
+    try { await navigator.clipboard.writeText(link); setStatus('Presenter link copied', 'ok'); }
+    catch (e) { prompt('Copy this presenter link:', link); }
+  });
+
+  // ------------------------------------------------------- image / video slide
+  let media = { enabled: false, kind: null, filename: null, link: '', url: null }, mediaLimits = { image_mb: 20, video_mb: 200 };
+  function mStatus(t, cls) { const s = $('mStatus'); s.textContent = t || ''; s.className = 'mstatus' + (cls ? ' ' + cls : ''); }
+  async function loadMedia(page) {
+    media = { enabled: false, kind: null, filename: null, link: '', url: null }; renderMedia();
+    const res = await api('/api/media/' + page); if (!res.ok || current !== page) return;
+    const d = await res.json(); mediaLimits = d.limits || mediaLimits; media = d; renderMedia();
+  }
+  function renderMedia() {
+    $('mediaYes').checked = media.enabled; $('mediaNo').checked = !media.enabled;
+    $('mediaCard').hidden = !media.enabled; $('noMediaNote').hidden = media.enabled;
+    $('mLink').value = media.link || ''; mStatus('');
+    const box = $('mCanvas'); box.textContent = '';
+    if (media.url && media.kind === 'image') { const i = document.createElement('img'); i.src = media.url; i.alt = media.filename || 'Image'; box.appendChild(i); }
+    else if (media.url && media.kind === 'video') { const v = document.createElement('video'); v.src = media.url; v.controls = true; v.preload = 'metadata'; box.appendChild(v); }
+    else if (media.link) { const d = document.createElement('div'); d.className = 'vlink'; d.append('Video link: '); const a = document.createElement('a'); a.href = media.link; a.target = '_blank'; a.rel = 'noopener noreferrer'; a.textContent = media.link; d.appendChild(a); box.appendChild(d); }
+    else { const d = document.createElement('div'); d.className = 'drop'; const b = document.createElement('b'); b.textContent = READONLY ? 'Nothing added yet' : 'Drop an image or video here'; if (!READONLY) d.append(b, 'or use "Choose image or video" below'); else d.append(b); box.appendChild(d); }
+    $('mRemove').hidden = !(media.url || media.link);
+    $('mChoose').textContent = media.url ? 'Replace image or video' : 'Choose image or video';
+  }
+  async function setMediaEnabled(on) {
+    if (READONLY) return;
+    const res = await api('/api/media/' + state.page, { method: 'PUT', body: JSON.stringify({ enabled: on }) });
+    if (res.ok) { media = { ...media, ...(await res.json()) }; } else { media.enabled = !on; mStatus('Could not change this', 'err'); }
+    renderMedia();
+  }
+  [$('mediaYes'), $('mediaNo')].forEach(el => el.addEventListener('change', () => setMediaEnabled($('mediaYes').checked)));
+  async function uploadMedia(file) {
+    if (READONLY || !file) return;
+    const isVid = file.type.startsWith('video/') || /\.(mp4|webm|mov|m4v)$/i.test(file.name);
+    const maxMb = isVid ? mediaLimits.video_mb : mediaLimits.image_mb;
+    if (file.size > maxMb * 1048576) { mStatus(`Too large — the limit is ${maxMb} MB for ${isVid ? 'videos' : 'images'}.`, 'err'); return; }
+    const page = state.page, fd = new FormData(); fd.append('file', file);
+    mStatus('Uploading…');
+    try {
+      const res = await fetch('/api/media/' + page + '/file', { method: 'POST', body: fd, headers: authHeaders() });
+      const d = await res.json().catch(() => ({ message: 'Upload failed (' + res.status + ')' }));
+      if (current !== page) return;
+      if (res.ok) { media = d; renderMedia(); mStatus('Saved', 'ok'); } else mStatus(d.message || 'Upload failed', 'err');
+    } catch (e) { mStatus('Upload failed — check your connection', 'err'); }
+  }
+  $('mChoose').addEventListener('click', () => $('mFile').click());
+  $('mFile').addEventListener('change', () => { uploadMedia($('mFile').files[0]); $('mFile').value = ''; });
+  $('mRemove').addEventListener('click', async () => {
+    if (!confirm('Remove the image/video from this slide?')) return;
+    const res = await api('/api/media/' + state.page + '/file', { method: 'DELETE' });
+    if (res.ok) { media = await res.json(); renderMedia(); }
+  });
+  $('mLinkSave').addEventListener('click', async () => {
+    const res = await api('/api/media/' + state.page, { method: 'PUT', body: JSON.stringify({ enabled: true, link: $('mLink').value }) });
+    const d = await res.json();
+    if (res.ok) { media = { ...media, ...d }; renderMedia(); mStatus('Saved', 'ok'); } else mStatus(d.message || 'Could not save link', 'err');
+  });
+  const mBox = $('mCanvas');
+  ['dragenter', 'dragover'].forEach(ev => mBox.addEventListener(ev, e => { e.preventDefault(); mBox.classList.add('drag'); }));
+  ['dragleave', 'drop'].forEach(ev => mBox.addEventListener(ev, e => { e.preventDefault(); mBox.classList.remove('drag'); }));
+  mBox.addEventListener('drop', e => { if (!READONLY) uploadMedia(e.dataTransfer.files[0]); });
+
+  start();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,8 @@
+Flask>=3.0
+pypdf>=5.0
+reportlab>=4.0
+pdfplumber>=0.11
+numpy
+Pillow
+pypdfium2>=4.30
+gunicorn>=22.0

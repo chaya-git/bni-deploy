@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BNI Jetkings · Updated Deck</title>
+<style>
+  :root { --red: #CF2030; --red-dark: #A91826; --ink: #1c1f2a; --muted: #5d6475; --line: #dfe2ea; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body { font: 15px/1.45 -apple-system, "Segoe UI", Roboto, Arial, sans-serif; color: var(--ink); background: #e9ebf1; display: flex; flex-direction: column; }
+  .topbar { display: flex; align-items: center; gap: 14px; padding: 10px 20px; background: #fff; border-bottom: 3px solid var(--red); flex-wrap: wrap; }
+  .brand { font-weight: 800; letter-spacing: .02em; color: var(--red); font-size: 20px; }
+  .brand small { display: block; font-weight: 600; font-size: 11px; color: var(--muted); letter-spacing: .12em; margin-top: -2px; }
+  h1 { font-size: 16px; margin: 0; font-weight: 600; flex: 1; min-width: 140px; }
+  .btn { border: 1px solid var(--line); background: #fff; border-radius: 8px; padding: 8px 14px; font: inherit; font-weight: 600; color: var(--ink); text-decoration: none; }
+  .btn:hover { background: #fafbfd; border-color: #b9bfce; }
+  .btn.primary { background: var(--red); border-color: var(--red); color: #fff; }
+  .btn.primary:hover { background: var(--red-dark); }
+  iframe { flex: 1; width: 100%; border: 0; background: #e9ebf1; }
+  .note { display: none; padding: 40px 20px; text-align: center; color: var(--muted); }
+</style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">BNI <small>JETKINGS</small></div>
+    <h1>Updated deck · view only</h1>
+    <a class="btn" href="/">Back</a>
+    <a class="btn" href="/deck.pdf" target="_blank" rel="noopener">Open full screen</a>
+    <a class="btn primary" href="/deck.pdf?download=1">Download PDF</a>
+  </header>
+  <iframe id="f" title="Updated deck" src="/deck.pdf#view=FitH"></iframe>
+  <div class="note" id="note">Your browser can't show the deck here. Use <b>Open full screen</b> or <b>Download PDF</b> above.</div>
+<script>
+  // Phones usually can't show a PDF inside a page - fall back to the buttons.
+  var nav = navigator, ok = nav.pdfViewerEnabled !== false;
+  if (!ok) { document.getElementById('f').style.display = 'none'; document.getElementById('note').style.display = 'block'; }
+</script>
+</body>
+</html>
