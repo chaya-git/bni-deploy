@@ -130,6 +130,9 @@
   .rolecard:hover, .rolecard:focus-visible { border-color: var(--red); box-shadow: 0 6px 20px rgba(207,32,48,.12); outline: none; }
   .rolecard b { display: block; font-size: 19px; margin-bottom: 6px; }
   .rolecard span { color: var(--muted); font-size: 14px; }
+  .powered { margin-top: 56px; text-align: center; color: var(--muted); font-size: 13px; }
+  .powered p { margin: 0; letter-spacing: .04em; }
+  .powered p b { color: var(--ink); }
   .backlink { background: none; border: 0; color: var(--muted); padding: 0; margin-top: 12px; text-decoration: underline; font-size: 13px; }
   @media (max-width: 600px) { .rolegrid { grid-template-columns: 1fr; } }
   [hidden] { display: none !important; }
@@ -161,6 +164,9 @@
     <div class="rolegrid">
       <button class="rolecard" id="rolePresenter" type="button"><b>I'm a presenter</b><span>Sign in to add or edit your Specific Ask and any image or video.</span></button>
       <button class="rolecard" id="roleViewer" type="button"><b>I'm a viewer</b><span>Open the updated deck right away. View only, nothing to sign in to.</span></button>
+    </div>
+    <div class="powered">
+      <p>Powered by <b>Robomanthan Pvt Limited</b></p>
     </div>
   </div>
 </div>
