@@ -37,11 +37,11 @@ TEXT = HexColor("#000000")
 
 TITLE = "SPECIFIC ASK"
 PAD_X = 7.0
-PAD_Y = 4.5
+PAD_Y = 3.0
 LEAD = 1.22
-MAX_FONT = 20.0
+MAX_FONT = 32.0
 MIN_FONT = 9.0
-MAX_TABLE_W = 900.0
+MAX_TABLE_W = None   # None = use the whole free width
 COL1_RATIO = 0.38
 
 DEFAULT_HEADERS = ("Ask", "Details")
@@ -111,22 +111,28 @@ def wrap(text, bold, size, max_w):
     return lines
 
 
+def _pads(font):
+    """Padding grows with the text size so big tables don't look cramped."""
+    return max(PAD_X, font * 0.45), max(PAD_Y, font * 0.3)
+
+
 def _measure(font, body, headers, c1w, c2w):
-    tf = min(font + 4, 24.0)
-    title_h = tf * 1.5
-    h1 = wrap(headers[0], True, font, c1w - 2 * PAD_X)
-    h2 = wrap(headers[1], True, font, c2w - 2 * PAD_X)
-    head_h = max(len(h1), len(h2)) * font * LEAD + 2 * PAD_Y
+    px, py = _pads(font)
+    tf = min(font + 4, 30.0)
+    title_h = tf * 1.3
+    h1 = wrap(headers[0], True, font, c1w - 2 * px)
+    h2 = wrap(headers[1], True, font, c2w - 2 * px)
+    head_h = max(len(h1), len(h2)) * font * LEAD + 2 * py
     rows = []
     total = title_h + head_h
     for a, b in body:
-        la = wrap(a, False, font, c1w - 2 * PAD_X)
-        lb = wrap(b, False, font, c2w - 2 * PAD_X)
-        h = max(len(la), len(lb), 1) * font * LEAD + 2 * PAD_Y
+        la = wrap(a, False, font, c1w - 2 * px)
+        lb = wrap(b, False, font, c2w - 2 * px)
+        h = max(len(la), len(lb), 1) * font * LEAD + 2 * py
         rows.append((la, lb, h))
         total += h
     return {
-        "font": font, "title_font": tf, "title_h": title_h,
+        "font": font, "pad_x": px, "pad_y": py, "title_font": tf, "title_h": title_h,
         "head": (h1, h2, head_h), "rows": rows, "total_h": total,
     }
 
@@ -138,8 +144,8 @@ def compute(box, headers, rows):
     `overflow` (points of height missing at the smallest font).
     """
     bx0, by0, bx1, by1 = box
-    ix0, iy0, ix1, iy1 = bx0 + 6, by0 + 6, bx1 - 6, by1 - 4
-    width = min(ix1 - ix0, MAX_TABLE_W)
+    ix0, iy0, ix1, iy1 = bx0 + 4, by0 + 2, bx1 - 4, by1 - 2
+    width = ix1 - ix0 if MAX_TABLE_W is None else min(ix1 - ix0, MAX_TABLE_W)
     avail_h = iy1 - iy0
     c1w = width * COL1_RATIO
     c2w = width - c1w
@@ -158,9 +164,17 @@ def compute(box, headers, rows):
             break
         font -= 0.5
     fits = result["total_h"] <= avail_h
+    overflow = max(0.0, result["total_h"] - avail_h)
+    # Use the whole free height: share any spare space between the body rows (text stays centred).
+    extra = avail_h - result["total_h"]
+    n = len(result["rows"])
+    if fits and extra > 0 and n:
+        add = extra / n
+        result["rows"] = [(la, lb, h + add) for la, lb, h in result["rows"]]
+        result["total_h"] = avail_h
     result.update({
         "fits": fits,
-        "overflow": max(0.0, result["total_h"] - avail_h),
+        "overflow": overflow,
         "avail_h": avail_h, "x0": ix0, "y0": iy0, "width": width,
         "c1w": c1w, "c2w": c2w, "headers": headers, "placeholder": placeholder,
         "n_rows": 0 if placeholder else len(body),
@@ -178,6 +192,7 @@ def _draw_text(c, x, y, text, bold, size):
 def draw_table(c, lay):
     """Draw one computed table onto canvas c (PDF coordinates: origin bottom-left)."""
     f = lay["font"]
+    px, py = lay["pad_x"], lay["pad_y"]
     x0, top = lay["x0"], PAGE_H - lay["y0"]
     w, c1w = lay["width"], lay["c1w"]
 
@@ -202,9 +217,9 @@ def draw_table(c, lay):
     rect(x0 + c1w, y, w - c1w, hh, HEADER_FILL)
     c.setFillColor(TEXT)
     for col_x, lines in ((x0, h1), (x0 + c1w, h2)):
-        ty = y - PAD_Y - f * 0.95
+        ty = y - py - f * 0.95
         for ln in lines:
-            _draw_text(c, col_x + PAD_X, ty, ln, True, f)
+            _draw_text(c, col_x + px, ty, ln, True, f)
             ty -= f * LEAD
     y -= hh
 
@@ -214,9 +229,10 @@ def draw_table(c, lay):
         rect(x0 + c1w, y, w - c1w, rh, BODY_FILL)
         c.setFillColor(TEXT)
         for col_x, lines in ((x0, la), (x0 + c1w, lb)):
-            ty = y - PAD_Y - f * 0.95
+            block = len(lines) * f * LEAD + 2 * py          # natural height of this cell's text
+            ty = y - py - (rh - max(len(la), len(lb), 1) * f * LEAD - 2 * py) / 2 - f * 0.95
             for ln in lines:
-                _draw_text(c, col_x + PAD_X, ty, ln, False, f)
+                _draw_text(c, col_x + px, ty, ln, False, f)
                 ty -= f * LEAD
         y -= rh
 

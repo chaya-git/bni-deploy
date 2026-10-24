@@ -45,7 +45,7 @@ Other settings: `PORT`, `BNI_DATA_DIR`.
 * One row per slide in the database; saves are version-checked, so a stale tab or two people can never silently overwrite each other (they get a "reload latest" message).
 * Every save is also kept in `ask_history`.
 * Text that cannot fit the slide is **refused with a message** instead of being cut off or spilling over content.
-  Text shrinks from 20pt down to 9pt to fit. Characters the slide fonts lack (e.g. Kannada) are refused clearly.
+  The table fills the whole free space under the details: text starts as large as 32pt and shrinks down to 9pt only as needed to fit. Characters the slide fonts lack (e.g. Kannada) are refused clearly.
 
 ## Files
 * `assets/deck.pdf` – master deck (never modified)   * `assets/presenters.json` – 76 presenter slides + measured free space
