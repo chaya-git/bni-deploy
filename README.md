@@ -20,6 +20,11 @@ Sign in at `/` with either the admin key or the viewer key; the server works out
   Anyone who has your site address can open it, so only share the address with people who may see the whole deck.
   The deck is rebuilt automatically whenever someone saves a change.
 
+**Password-protected PowerPoint:** the viewer page (`/view`) and the admin dashboard have a *Download PPT* button. It asks for a password
+(default `Bni@#123`; change it with the `BNI_PPT_PASSWORD` environment variable) and only then downloads the updated deck as a `.pptx`
+(one slide per page, with video links kept clickable). The password is checked on the server; wrong guesses are throttled.
+Slides are pictures of the pages, so text inside them is not editable in PowerPoint.
+
 ## Run it
     pip install -r requirements.txt        # slide previews use pypdfium2 (installed by this command, no extra software needed)
     python3 app.py                         # http://localhost:8000

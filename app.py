@@ -754,6 +754,116 @@ def public_deck():
     return resp
 
 
+# ---- password-protected PowerPoint download of the updated deck
+# The password is checked on the server. Override it with the BNI_PPT_PASSWORD environment variable.
+PPT_PASSWORD = os.environ.get("BNI_PPT_PASSWORD", "Bni@#123")
+PPT_IMG_W = 1600          # pixel width of each slide picture inside the .pptx
+_pptx_cache = {}
+_pptx_lock = threading.Lock()
+_ppt_fail = {}            # ip -> (count, window_start)  (simple brute-force throttle)
+_ppt_fail_lock = threading.Lock()
+PPT_MAX_FAILS, PPT_WINDOW = 8, 600
+
+
+def _client_ip():
+    fwd = request.headers.get("X-Forwarded-For", "")
+    return (fwd.split(",")[0].strip() if fwd else request.remote_addr) or "?"
+
+
+def _ppt_blocked(ip):
+    import time
+    with _ppt_fail_lock:
+        n, t0 = _ppt_fail.get(ip, (0, 0))
+        if time.time() - t0 > PPT_WINDOW:
+            _ppt_fail.pop(ip, None)
+            return False
+        return n >= PPT_MAX_FAILS
+
+
+def _ppt_note_fail(ip):
+    import time
+    with _ppt_fail_lock:
+        n, t0 = _ppt_fail.get(ip, (0, 0))
+        if time.time() - t0 > PPT_WINDOW:
+            n, t0 = 0, time.time()
+        _ppt_fail[ip] = (n + 1, t0 or time.time())
+
+
+def build_pptx(pdf_bytes):
+    """Turn the updated deck PDF into a 16:9 PowerPoint: one slide per PDF page, drawn as a
+    full-slide picture, with the PDF's clickable links (e.g. video 'Click to play') re-created."""
+    import pypdfium2 as pdfium
+    from pptx import Presentation
+    from pptx.util import Emu
+
+    reader = PdfReader(io.BytesIO(pdf_bytes))
+    pdf = pdfium.PdfDocument(pdf_bytes)
+    prs = Presentation()
+    first = reader.pages[0]
+    pw, ph = float(first.mediabox.width), float(first.mediabox.height)
+    prs.slide_width = Emu(12192000)                       # 13.333 in
+    prs.slide_height = Emu(int(12192000 * ph / pw))
+    blank = prs.slide_layouts[6]
+    try:
+        for i, rpage in enumerate(reader.pages):
+            page = pdf[i]
+            w, h = page.get_size()
+            bmp = page.render(scale=PPT_IMG_W / w)
+            img = bmp.to_pil().convert("RGB")
+            page.close()
+            buf = io.BytesIO()
+            img.save(buf, "JPEG", quality=82, optimize=True)
+            buf.seek(0)
+            slide = prs.slides.add_slide(blank)
+            slide.shapes.add_picture(buf, 0, 0, prs.slide_width, prs.slide_height)
+            sx, sy = prs.slide_width / w, prs.slide_height / h
+            for annot in (rpage.get("/Annots") or []):
+                try:
+                    a = annot.get_object()
+                    uri = (a.get("/A") or {}).get("/URI")
+                    if a.get("/Subtype") != "/Link" or not uri:
+                        continue
+                    x0, y0, x1, y1 = [float(v) for v in a["/Rect"]]
+                    x0, x1 = sorted((x0, x1)); y0, y1 = sorted((y0, y1))
+                    shp = slide.shapes.add_shape(1, int(x0 * sx), int((h - y1) * sy),
+                                                 int((x1 - x0) * sx), int((y1 - y0) * sy))
+                    shp.fill.background()
+                    shp.line.fill.background()
+                    shp.click_action.hyperlink.address = str(uri)
+                except Exception:
+                    continue
+    finally:
+        pdf.close()
+    out = io.BytesIO()
+    prs.save(out)
+    return out.getvalue()
+
+
+@app.route("/api/export/deck.pptx", methods=["POST"])
+def export_deck_pptx():
+    ip = _client_ip()
+    if _ppt_blocked(ip):
+        return jsonify(error="too_many", message="Too many wrong attempts. Please wait a few minutes and try again."), 429
+    body = request.get_json(silent=True) or {}
+    if not _eq(str(body.get("password", "")), PPT_PASSWORD):
+        _ppt_note_fail(ip)
+        return jsonify(error="bad_password", message="Wrong password."), 403
+    base_url = request.host_url.rstrip("/")
+    include_empty = bool(body.get("include_empty"))
+    pdf = build_deck(include_empty, base_url)
+    key = (deck_fingerprint(), include_empty, base_url)
+    with _pptx_lock:                      # one build at a time; later requests reuse the cached file
+        data = _pptx_cache.get(key)
+        if data is None:
+            data = build_pptx(pdf)
+            _pptx_cache.clear()
+            _pptx_cache[key] = data
+    resp = Response(data, mimetype="application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                    headers={"Content-Disposition": 'attachment; filename="BNI-Jetkings-OCT-updated.pptx"'})
+    resp.headers["Cache-Control"] = "no-store"
+    return resp
+
+
 @app.route("/api/links.csv")
 def links_csv():
     require_admin()
